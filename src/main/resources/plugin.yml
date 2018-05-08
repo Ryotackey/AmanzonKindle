@@ -1,0 +1,21 @@
+name: AmanzonKindle
+version: ${project.version}
+main: red.man10.amanzonkindle.AmanzonKindle
+commands:
+  amk:
+    description: Command no setsumei
+    usage: /<command>
+    default: true
+permissions:
+  amanzon.publicateop:
+    default: OP
+  amanzon.menu:
+    default: true
+  amanzon.reauthor:
+      default: OP
+  amanzon.register:
+      default: OP
+  amanzon.reload:
+      default: OP
+  amanzon.op:
+      default: OP

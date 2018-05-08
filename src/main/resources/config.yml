@@ -1,0 +1,12 @@
+mysql:
+  host:
+  user:
+  pass:
+  port:
+  db:
+authorbalance: 0.8
+category:
+  0: 小説
+  1: 解説書
+  2: 歴史書
+  3: その他
