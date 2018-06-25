@@ -1,13 +1,14 @@
 package red.man10.amanzonkindle
 
 import org.bukkit.entity.Player
+import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.util.io.BukkitObjectInputStream
 import org.bukkit.util.io.BukkitObjectOutputStream
 import org.yaml.snakeyaml.external.biz.base64Coder.Base64Coder
 import red.man10.kotlin.CustomConfig
-import red.man10.kotlin.MySOLManager
+import red.man10.kotlin.MySQLManager
 import red.man10.kotlin.VaultManager
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -20,20 +21,20 @@ import java.text.SimpleDateFormat
 class AmanzonKindle : JavaPlugin() {
     var vm: VaultManager? = null
     var config: CustomConfig? = null
-    var mysql: MySOLManager? = null
+    var mysql: MySQLManager? = null
     var event: Event? = null
 
     var openinvmap: HashMap<Player, MutableList<ItemStack>> = HashMap()
     var openowninvmap: HashMap<Player, MutableList<ItemStack>> = HashMap()
     var searchinvmap: HashMap<Player, MutableList<ItemStack>> = HashMap()
-    var favmap: HashMap<Player, Boolean> = HashMap()
+    var buyBookMap: HashMap<Player, Inventory> = HashMap()
+    var getFavMap: HashMap<Player, Inventory> = HashMap()
+    var getOPMap: HashMap<Player, Inventory> = HashMap()
 
     var searchTitlePlayer: MutableList<Player> = mutableListOf()
     var searchContentsPlayer: MutableList<Player> = mutableListOf()
     var searchAuthorPlayer: MutableList<Player> = mutableListOf()
     var PublicatePlayer: MutableList<Player> = mutableListOf()
-
-    var bookList: MutableList<ItemStack> = mutableListOf()
 
     var price = 0.0
 
@@ -44,7 +45,7 @@ class AmanzonKindle : JavaPlugin() {
 
         vm = VaultManager(this)
         config = CustomConfig(this)
-        mysql = MySOLManager(this, "library")
+        mysql = MySQLManager(this, "amanzon")
         event = Event(this)
 
         config!!.saveDefaultConfig()
@@ -108,11 +109,6 @@ class AmanzonKindle : JavaPlugin() {
     fun formattedTimestamp(timestamp: Timestamp, timeFormat: String): String {
         return SimpleDateFormat(timeFormat).format(timestamp)
     }
-
-    fun current(): Timestamp {
-        return Timestamp(System.currentTimeMillis())
-    }
-
 }
 
 

@@ -23,7 +23,7 @@ class Event(private val plugin: AmanzonKindle) : Listener {
         val p: Player = e.whoClicked as Player
         val item = e.currentItem
 
-        if (e.clickedInventory.name == null)return
+        if (e.clickedInventory == null)return
 
         if (e.clickedInventory.name == "§6§l本一覧") {
 
@@ -72,15 +72,6 @@ class Event(private val plugin: AmanzonKindle) : Listener {
 
                     val gp = GetBookPrice(p, item, plugin)
                     gp.start()
-                    try {
-                        gp.join(1500) // タイムアウト
-                        gp.interrupt() // 中断
-                    } catch (e: InterruptedException) {
-                        // 例外処理
-                    }
-
-                    val guiProcess = GuiProcess(plugin)
-                    p.openInventory(guiProcess.buyBookGuiCreate(item, plugin.price))
 
                 }
             }
@@ -112,15 +103,8 @@ class Event(private val plugin: AmanzonKindle) : Listener {
 
                 val gob = GetOwnBook(p, plugin)
                 gob.start()
-                try {
-                    gob.join(1500) // タイムアウト
-                    gob.interrupt() // 中断
-                } catch (e: InterruptedException) {
-                    // 例外処理
-                }
 
-                val gp = GuiProcess(plugin)
-                p.openInventory(gp.allBookGuiCreate(p, 1, "§6§l自分の本棚", plugin.openowninvmap))
+
             }
 
             if (item.type == Material.WRITTEN_BOOK) {
@@ -129,15 +113,6 @@ class Event(private val plugin: AmanzonKindle) : Listener {
 
                 val gb = GetBook(p, plugin)
                 gb.start()
-                try {
-                    gb.join(1500) // タイムアウト
-                    gb.interrupt() // 中断
-                } catch (e: InterruptedException) {
-                    // 例外処理
-                }
-
-                val gp = GuiProcess(plugin)
-                p.openInventory(gp.allBookGuiCreate(p, 1, "§6§l本一覧", plugin.openinvmap))
 
             }
 
@@ -175,15 +150,6 @@ class Event(private val plugin: AmanzonKindle) : Listener {
 
                 val gb = GetBook(p, plugin)
                 gb.start()
-                try {
-                    gb.join(1500) // タイムアウト
-                    gb.interrupt() // 中断
-                } catch (e: InterruptedException) {
-                    // 例外処理
-                }
-
-                val gp = GuiProcess(plugin)
-                p.openInventory(gp.allBookGuiCreate(p, 1, "§6§l本一覧", plugin.openinvmap))
 
             }
 
@@ -223,20 +189,13 @@ class Event(private val plugin: AmanzonKindle) : Listener {
 
                 val getFav = GetFav(item, p, plugin)
                 getFav.start()
-                try {
-                    getFav.join(1500) // タイムアウト
-                    getFav.interrupt() // 中断
-                } catch (e: InterruptedException) {
-                    // 例外処理
-                }
-
-                val gp = GuiProcess(plugin)
-                p.openInventory(gp.bookGui(plugin.favmap[p]!!, item))
 
             }
 
         }
         if (e.clickedInventory.name == "§6§l検索メニュー") {
+
+            e.isCancelled = true
 
             if (item.type == Material.BOOK_AND_QUILL) {
 
@@ -271,17 +230,8 @@ class Event(private val plugin: AmanzonKindle) : Listener {
 
                 val getFavBook = GetFavBook(p, plugin)
                 getFavBook.start()
-                try {
-                    getFavBook.join(1500) // タイムアウト
-                    getFavBook.interrupt() // 中断
-                } catch (e: InterruptedException) {
-                    // 例外処理
-                    e.printStackTrace()
-                }
 
-                val gp = GuiProcess(plugin)
-
-                p.openInventory(gp.allBookGuiCreate(p, 1, "§6§l検索結果", plugin.searchinvmap))
+                p.closeInventory()
 
             }
 
@@ -289,17 +239,8 @@ class Event(private val plugin: AmanzonKindle) : Listener {
 
                 val getDLBook = GetDLBook(p, plugin)
                 getDLBook.start()
-                try {
-                    getDLBook.join(1500) // タイムアウト
-                    getDLBook.interrupt() // 中断
-                } catch (e: InterruptedException) {
-                    // 例外処理
-                    e.printStackTrace()
-                }
 
-                val gp = GuiProcess(plugin)
-
-                p.openInventory(gp.allBookGuiCreate(p, 1, "§6§l検索結果", plugin.searchinvmap))
+                p.closeInventory()
 
             }
 
@@ -333,7 +274,7 @@ class Event(private val plugin: AmanzonKindle) : Listener {
 
                     val gp = GuiProcess(plugin)
 
-                    p.openInventory(gp.allBookGuiCreate(p, page, "§6§l本一覧", plugin.searchinvmap))
+                    p.openInventory(gp.allBookGuiCreate(p, page, "§6§l検索結果", plugin.searchinvmap))
 
                 }
 
@@ -344,7 +285,7 @@ class Event(private val plugin: AmanzonKindle) : Listener {
 
                     val gp = GuiProcess(plugin)
 
-                    p.openInventory(gp.allBookGuiCreate(p, page, "§6§l本一覧", plugin.searchinvmap))
+                    p.openInventory(gp.allBookGuiCreate(p, page, "§6§l検索結果", plugin.searchinvmap))
 
                 }
 
@@ -352,14 +293,6 @@ class Event(private val plugin: AmanzonKindle) : Listener {
 
                     val gp = GetBookPrice(p, item, plugin)
                     gp.start()
-                    try {
-                        gp.join(1500) // タイムアウト
-                        gp.interrupt() // 中断
-                    } catch (e: InterruptedException) {
-                        // 例外処理
-                    }
-                    val guiProcess = GuiProcess(plugin)
-                    p.openInventory(guiProcess.buyBookGuiCreate(item, plugin.price))
 
                 }
 
@@ -378,25 +311,7 @@ class Event(private val plugin: AmanzonKindle) : Listener {
 
                 val favProcess = FavProcess(e.clickedInventory.getItem(4), false, p, plugin)
                 favProcess.start()
-                try {
-                    favProcess.join(1500) // タイムアウト
-                    favProcess.interrupt() // 中断
-                } catch (e: InterruptedException) {
-                    // 例外処理
-                }
 
-
-                val getFav = GetFav(e.clickedInventory.getItem(4), p, plugin)
-                getFav.start()
-                try {
-                    getFav.join(1500) // タイムアウト
-                    getFav.interrupt() // 中断
-                } catch (e: InterruptedException) {
-                    // 例外処理
-                }
-
-                val gp = GuiProcess(plugin)
-                p.openInventory(gp.bookGui(plugin.favmap[p]!!, e.clickedInventory.getItem(4)))
             }
 
             if (item.itemMeta.displayName == "§6§l本を読む") {
@@ -410,24 +325,6 @@ class Event(private val plugin: AmanzonKindle) : Listener {
 
                 val favProcess = FavProcess(e.clickedInventory.getItem(4), true, p, plugin)
                 favProcess.start()
-                try {
-                    favProcess.join(1500) // タイムアウト
-                    favProcess.interrupt() // 中断
-                } catch (e: InterruptedException) {
-                    // 例外処理
-                }
-
-                val getFav = GetFav(e.clickedInventory.getItem(4), p, plugin)
-                getFav.start()
-                try {
-                    getFav.join(1500) // タイムアウト
-                    getFav.interrupt() // 中断
-                } catch (e: InterruptedException) {
-                    // 例外処理
-                }
-
-                val gp = GuiProcess(plugin)
-                p.openInventory(gp.bookGui(plugin.favmap[p]!!, e.clickedInventory.getItem(4)))
 
             }
 
@@ -496,6 +393,8 @@ class Event(private val plugin: AmanzonKindle) : Listener {
 
         if (e.clickedInventory.name == "§c§l本を削除する"){
 
+            e.isCancelled = true
+
             if (!item.hasItemMeta()) {
                 return
             }
@@ -504,24 +403,6 @@ class Event(private val plugin: AmanzonKindle) : Listener {
 
                 val rb = RemoveBook(e.clickedInventory.getItem(13), p, plugin)
                 rb.start()
-                try {
-                    rb.join(1500) // タイムアウト
-                    rb.interrupt() // 中断
-                } catch (e: InterruptedException) {
-                    // 例外処理
-                }
-
-                val gb = GetBook(p, plugin)
-                gb.start()
-                try {
-                    gb.join(1500) // タイムアウト
-                    gb.interrupt() // 中断
-                } catch (e: InterruptedException) {
-                    // 例外処理
-                }
-
-                val gp = GuiProcess(plugin)
-                p.openInventory(gp.allBookGuiCreate(p, 1, "§6§l本一覧", plugin.openinvmap))
 
             }
 
@@ -534,15 +415,6 @@ class Event(private val plugin: AmanzonKindle) : Listener {
 
                 val gb = GetBook(p, plugin)
                 gb.start()
-                try {
-                    gb.join(1500) // タイムアウト
-                    gb.interrupt() // 中断
-                } catch (e: InterruptedException) {
-                    // 例外処理
-                }
-
-                val gp = GuiProcess(plugin)
-                p.openInventory(gp.allBookGuiCreate(p, 1, "§6§l本一覧", plugin.openinvmap))
 
             }
 
@@ -562,63 +434,32 @@ class Event(private val plugin: AmanzonKindle) : Listener {
 
             e.isCancelled = true
 
+            plugin.searchTitlePlayer.remove(p)
+
             val sb = SearchBook("name", m, p, plugin)
             sb.start()
-            try {
-                sb.join(1500) // タイムアウト
-                sb.interrupt() // 中断
-            } catch (e: InterruptedException) {
-                // 例外処理
-                e.printStackTrace()
-            }
 
-            val gp = GuiProcess(plugin)
-
-            p.openInventory(gp.allBookGuiCreate(p, 1, "§6§l検索結果", plugin.searchinvmap))
-
-            plugin.searchTitlePlayer.remove(p)
         }
 
         if (plugin.searchContentsPlayer.contains(p)) {
 
             e.isCancelled = true
 
+            plugin.searchContentsPlayer.remove(p)
+
             val sb = SearchBook("contents", m, p, plugin)
             sb.start()
-            try {
-                sb.join(1500) // タイムアウト
-                sb.interrupt() // 中断
-            } catch (e: InterruptedException) {
-                // 例外処理
-                e.printStackTrace()
-            }
 
-            val gp = GuiProcess(plugin)
-
-            p.openInventory(gp.allBookGuiCreate(p, 1, "§6§l検索結果", plugin.searchinvmap))
-
-            plugin.searchContentsPlayer.remove(p)
         }
 
         if (plugin.searchAuthorPlayer.contains(p)) {
 
             e.isCancelled = true
 
+            plugin.searchAuthorPlayer.remove(p)
+
             val sb = SearchBook("author_name", m, p, plugin)
             sb.start()
-            try {
-                sb.join(1500) // タイムアウト
-                sb.interrupt() // 中断
-            } catch (e: InterruptedException) {
-                // 例外処理
-                e.printStackTrace()
-            }
-
-            val gp = GuiProcess(plugin)
-
-            p.openInventory(gp.allBookGuiCreate(p, 1, "§6§l検索結果", plugin.searchinvmap))
-
-            plugin.searchAuthorPlayer.remove(p)
 
         }
 

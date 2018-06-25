@@ -9,7 +9,12 @@ import java.sql.SQLException
 import java.sql.Statement
 import java.util.logging.Level
 
-class MySOLManager////////////////////////////////
+/**
+ * Created by takatronix on 2017/03/05.
+ */
+
+
+class MySQLManager////////////////////////////////
 //      コンストラクタ
 ////////////////////////////////
 (private val plugin: JavaPlugin, private val conName: String) {
@@ -26,8 +31,14 @@ class MySOLManager////////////////////////////////
     private var MySQL: MySQLFunc? = null
 
     init {
+        this.connected = false
         loadConfig()
 
+        this.connected = Connect(HOST, DB, USER, PASS, PORT)!!
+
+        if (!this.connected) {
+            plugin.logger.info("Unable to establish a MySQL connection.")
+        }
     }
 
     /////////////////////////////////
@@ -42,17 +53,27 @@ class MySOLManager////////////////////////////////
         PORT = plugin.config.getString("mysql.port")
         DB = plugin.config.getString("mysql.db")
         plugin.logger.info("Config loaded")
+
+    }
+
+    fun commit() {
+        try {
+            this.con!!.commit()
+        } catch (e: Exception) {
+
+        }
+
     }
 
     ////////////////////////////////
     //       接続
     ////////////////////////////////
-    fun Connect(host: String, db: String, user: String, pass: String, port: String): Boolean? {
+    fun Connect(host: String?, db: String?, user: String?, pass: String?, port: String?): Boolean? {
         this.HOST = host
         this.DB = db
         this.USER = user
         this.PASS = pass
-        this.MySQL = MySQLFunc(host, db, user, pass, port)
+        this.MySQL = MySQLFunc(host!!, db!!, user!!, pass!!, port!!)
         this.con = this.MySQL!!.open()
         if (this.con == null) {
             Bukkit.getLogger().info("failed to open MYSQL")
@@ -120,7 +141,7 @@ class MySOLManager////////////////////////////////
         }
         var ret = true
         if (debugMode!!) {
-            plugin.logger.info("query:" + query)
+            plugin.logger.info("query:$query")
         }
 
         try {
@@ -133,7 +154,7 @@ class MySOLManager////////////////////////////////
 
         }
 
-        this.MySQL!!.close(this.con)
+        this.close()
         return ret
     }
 
@@ -149,11 +170,8 @@ class MySOLManager////////////////////////////////
             return rs
         }
 
-
-
-
         if (debugMode!!) {
-            plugin.logger.info("query:" + query)
+            plugin.logger.info("[DEBUG] query:$query")
         }
 
         try {
@@ -161,10 +179,24 @@ class MySOLManager////////////////////////////////
             rs = this.st!!.executeQuery(query)
         } catch (var4: SQLException) {
             this.plugin.logger.info("[" + this.conName + "] Error executing query: " + var4.errorCode)
+            this.plugin.logger.info(query)
         }
+
+        //        this.close();
 
         return rs
     }
 
 
+    fun close() {
+
+        try {
+            this.st!!.close()
+            this.con!!.close()
+            this.MySQL!!.close(this.con)
+
+        } catch (var4: SQLException) {
+        }
+
+    }
 }

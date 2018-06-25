@@ -4,14 +4,18 @@ import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.BookMeta
+import red.man10.kotlin.MySQLManager
 import java.sql.ResultSet
 import java.util.*
 import java.util.concurrent.ExecutionException
+import kotlin.collections.HashMap
 
 class MySQLCreate(private val plugin: AmanzonKindle) : Thread() {
     override fun run() {
 
-        plugin.mysql!!.execute("CREATE TABLE `amanzonkindle_booktable` (\n" +
+        val mysql = MySQLManager(plugin, "amanzon")
+
+        mysql!!.execute("CREATE TABLE `amanzonkindle_booktable` (\n" +
                 "  `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
                 "  `book_name` varchar(50) DEFAULT NULL,\n" +
                 "  `book_author_name` varchar(50) DEFAULT NULL,\n" +
@@ -27,7 +31,7 @@ class MySQLCreate(private val plugin: AmanzonKindle) : Thread() {
                 "  PRIMARY KEY (`id`)\n" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;")
 
-        plugin.mysql!!.execute("CREATE TABLE `amanzonkindle_bookshelf` (\n" +
+        mysql!!.execute("CREATE TABLE `amanzonkindle_bookshelf` (\n" +
                 "  `id` int(32) NOT NULL AUTO_INCREMENT,\n" +
                 "  `owner_name` varchar(50) DEFAULT NULL,\n" +
                 "  `owner_uuid` varchar(50) DEFAULT NULL,\n" +
@@ -37,7 +41,7 @@ class MySQLCreate(private val plugin: AmanzonKindle) : Thread() {
                 "  PRIMARY KEY (`id`)\n" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;\n")
 
-        plugin.mysql!!.execute("CREATE TABLE `amanzonkindle_publicatertable` (\n" +
+        mysql!!.execute("CREATE TABLE `amanzonkindle_publicatertable` (\n" +
                 "  `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
                 "  `publicater_name` varchar(50) DEFAULT NULL,\n" +
                 "  `publicater_uuid` varchar(50) DEFAULT NULL,\n" +
@@ -52,6 +56,8 @@ class MySQLCreate(private val plugin: AmanzonKindle) : Thread() {
 }
 
 class GetBook(private val p: Player, private val plugin: AmanzonKindle): Thread(){
+
+    val mysql = MySQLManager(plugin, "amanzon")
 
     var host: String = ""
     var user: String = ""
@@ -72,6 +78,7 @@ class GetBook(private val p: Player, private val plugin: AmanzonKindle): Thread(
 
     }
 
+    @Synchronized
     override fun run() {
 
         if (plugin.config!!.getConfig()!!.getString("mysql") == null) {
@@ -80,7 +87,7 @@ class GetBook(private val p: Player, private val plugin: AmanzonKindle): Thread(
             return
         }
 
-        if (plugin.mysql!!.Connect(host, db, user, pass, port) === false) {
+        if (mysql.Connect(host, db, user, pass, port) === false) {
             Bukkit.getLogger().info("Failed Conected MySQL")
             p.sendMessage("${plugin.prefix}§cMysqlデータベースに接続できないため失敗しました")
             return
@@ -89,7 +96,7 @@ class GetBook(private val p: Player, private val plugin: AmanzonKindle): Thread(
         var rs: ResultSet? = null
 
         try {
-            rs = plugin.mysql!!.query("SELECT * FROM amanzonkindle_booktable WHERE enable=true ORDER BY id DESC;")
+            rs = mysql.query("SELECT * FROM amanzonkindle_booktable WHERE enable=true ORDER BY id DESC;")
         } catch (e: InterruptedException) {
             e.printStackTrace()
         } catch (e: ExecutionException) {
@@ -137,13 +144,21 @@ class GetBook(private val p: Player, private val plugin: AmanzonKindle): Thread(
 
         }
 
+        mysql.close()
+
         plugin.openinvmap[p] = itemList
+
+        p.closeInventory()
+
+        p.chat("/amk getbook")
 
     }
 
 }
 
 class GetOwnBook(private val p: Player, private val plugin: AmanzonKindle): Thread(){
+
+    val mysql = MySQLManager(plugin, "amanzon")
 
     var host: String = ""
     var user: String = ""
@@ -164,6 +179,7 @@ class GetOwnBook(private val p: Player, private val plugin: AmanzonKindle): Thre
 
     }
 
+    @Synchronized
     override fun run() {
 
         if (plugin.config!!.getConfig()!!.getString("mysql") == null) {
@@ -172,7 +188,7 @@ class GetOwnBook(private val p: Player, private val plugin: AmanzonKindle): Thre
             return
         }
 
-        if (plugin.mysql!!.Connect(host, db, user, pass, port) === false) {
+        if (mysql.Connect(host, db, user, pass, port) === false) {
             Bukkit.getLogger().info("Failed Conected MySQL")
             p.sendMessage("${plugin.prefix}§cMysqlデータベースに接続できないため失敗しました")
             return
@@ -181,7 +197,7 @@ class GetOwnBook(private val p: Player, private val plugin: AmanzonKindle): Thre
         var rs: ResultSet? = null
 
         try {
-            rs = plugin.mysql!!.query("SELECT * FROM amanzonkindle_bookshelf WHERE owner_uuid='${p.uniqueId}' ORDER BY id DESC;")
+            rs = mysql.query("SELECT * FROM amanzonkindle_bookshelf WHERE owner_uuid='${p.uniqueId}' ORDER BY id DESC;")
         } catch (e: InterruptedException) {
             e.printStackTrace()
         } catch (e: ExecutionException) {
@@ -201,7 +217,7 @@ class GetOwnBook(private val p: Player, private val plugin: AmanzonKindle): Thre
             var bookget: ResultSet? = null
 
             try {
-                bookget = plugin.mysql!!.query("SELECT * FROM amanzonkindle_booktable WHERE id='${id}';")
+                bookget = mysql.query("SELECT * FROM amanzonkindle_booktable WHERE id='${id}';")
             } catch (e: InterruptedException) {
                 e.printStackTrace()
             } catch (e: ExecutionException) {
@@ -219,14 +235,23 @@ class GetOwnBook(private val p: Player, private val plugin: AmanzonKindle): Thre
             }
 
         }
+        mysql.close()
+
 
         plugin.openowninvmap[p] = itemList
+
+        p.closeInventory()
+
+        p.chat("/amk getownbook")
 
     }
 
 }
 
 class RegisterAuthor(private val p: Player, private val regp: Player, private val plugin: AmanzonKindle): Thread() {
+
+    val mysql = MySQLManager(plugin, "amanzon")
+
     var host: String = ""
     var user: String = ""
     var pass: String = ""
@@ -246,6 +271,7 @@ class RegisterAuthor(private val p: Player, private val regp: Player, private va
 
     }
 
+    @Synchronized
     override fun run() {
 
         if (plugin.config!!.getConfig()!!.getString("mysql") == null) {
@@ -254,7 +280,7 @@ class RegisterAuthor(private val p: Player, private val regp: Player, private va
             return
         }
 
-        if (plugin.mysql!!.Connect(host, db, user, pass, port) === false) {
+        if (mysql.Connect(host, db, user, pass, port) === false) {
             Bukkit.getLogger().info("Failed Conected MySQL")
             p.sendMessage("${plugin.prefix}§cMysqlデータベースに接続できないため失敗しました")
             return
@@ -265,7 +291,7 @@ class RegisterAuthor(private val p: Player, private val regp: Player, private va
         var rs: ResultSet? = null
 
         try {
-            rs = plugin.mysql!!.query("SELECT count(1) FROM amanzonkindle_publicatertable WHERE publicater_uuid='$uuid';")
+            rs = mysql.query("SELECT count(1) FROM amanzonkindle_publicatertable WHERE publicater_uuid='$uuid';")
         } catch (e: InterruptedException) {
             e.printStackTrace()
         } catch (e: ExecutionException) {
@@ -280,14 +306,19 @@ class RegisterAuthor(private val p: Player, private val regp: Player, private va
 
         val regpname = regp.name
 
-        plugin.mysql!!.execute("INSERT INTO amanzonkindle_publicatertable (publicater_name,publicater_uuid) VALUES('$regpname','$uuid');")
+        mysql.execute("INSERT INTO amanzonkindle_publicatertable (publicater_name,publicater_uuid) VALUES('$regpname','$uuid');")
 
         p.sendMessage("${plugin.prefix}§e${regp.displayName}§aを登録しました")
+
+        mysql.close()
 
     }
 }
 
 class DeregisterAuthor(private val p: Player, private val regp: Player, private val plugin: AmanzonKindle): Thread() {
+
+    val mysql = MySQLManager(plugin, "amanzon")
+
     var host: String = ""
     var user: String = ""
     var pass: String = ""
@@ -307,6 +338,7 @@ class DeregisterAuthor(private val p: Player, private val regp: Player, private 
 
     }
 
+    @Synchronized
     override fun run() {
 
         if (plugin.config!!.getConfig()!!.getString("mysql") == null) {
@@ -315,7 +347,7 @@ class DeregisterAuthor(private val p: Player, private val regp: Player, private 
             return
         }
 
-        if (plugin.mysql!!.Connect(host, db, user, pass, port) === false) {
+        if (mysql.Connect(host, db, user, pass, port) === false) {
             Bukkit.getLogger().info("Failed Conected MySQL")
             p.sendMessage("${plugin.prefix}§cMysqlデータベースに接続できないため失敗しました")
             return
@@ -326,7 +358,7 @@ class DeregisterAuthor(private val p: Player, private val regp: Player, private 
         var count: ResultSet? = null
 
         try {
-            count = plugin.mysql!!.query("SELECT count(1) FROM amanzonkindle_publicatertable WHERE publicater_uuid='$uuid';")
+            count = mysql.query("SELECT count(1) FROM amanzonkindle_publicatertable WHERE publicater_uuid='$uuid';")
         } catch (e: InterruptedException) {
             e.printStackTrace()
         } catch (e: ExecutionException) {
@@ -342,31 +374,36 @@ class DeregisterAuthor(private val p: Player, private val regp: Player, private 
         var rs: ResultSet? = null
 
         try {
-            rs = plugin.mysql!!.query("SELECT * FROM amanzonkindle_booktable WHERE book_author_uuid='$uuid';")
+            rs = mysql.query("SELECT * FROM amanzonkindle_booktable WHERE book_author_uuid='$uuid';")
         } catch (e: InterruptedException) {
             e.printStackTrace()
         } catch (e: ExecutionException) {
             e.printStackTrace()
         }
 
-        plugin.mysql!!.execute("DELETE FROM `amanzonkindle_booktable` WHERE `book_author_uuid`='$uuid';")
+        mysql.execute("DELETE FROM `amanzonkindle_booktable` WHERE `book_author_uuid`='$uuid';")
 
         while (rs!!.next()){
 
             val id = rs.getInt("id")
 
-            plugin.mysql!!.execute("DELETE FROM `amanzonkindle_bookshelf` WHERE buy_bookid=$id;")
+            mysql.execute("DELETE FROM `amanzonkindle_bookshelf` WHERE buy_bookid=$id;")
 
         }
 
-        plugin.mysql!!.execute("DELETE FROM `amanzonkindle_publicatertable` WHERE `publicater_uuid`='$uuid';")
+        mysql.execute("DELETE FROM `amanzonkindle_publicatertable` WHERE `publicater_uuid`='$uuid';")
 
         p.sendMessage("${plugin.prefix}§e${regp.displayName}§aを削除しました")
+
+        mysql.close()
 
     }
 }
 
 class GetBookPrice(private val p: Player, private val book: ItemStack, private val plugin: AmanzonKindle): Thread() {
+
+    val mysql = MySQLManager(plugin, "amanzon")
+
     var host: String = ""
     var user: String = ""
     var pass: String = ""
@@ -386,6 +423,7 @@ class GetBookPrice(private val p: Player, private val book: ItemStack, private v
 
     }
 
+    @Synchronized
     override fun run() {
 
         if (plugin.config!!.getConfig()!!.getString("mysql") == null) {
@@ -394,7 +432,7 @@ class GetBookPrice(private val p: Player, private val book: ItemStack, private v
             return
         }
 
-        if (plugin.mysql!!.Connect(host, db, user, pass, port) === false) {
+        if (mysql.Connect(host, db, user, pass, port) === false) {
             Bukkit.getLogger().info("Failed Conected MySQL")
             p.sendMessage("${plugin.prefix}§cMysqlデータベースに接続できないため失敗しました")
             return
@@ -412,7 +450,7 @@ class GetBookPrice(private val p: Player, private val book: ItemStack, private v
         var rs: ResultSet? = null
 
         try {
-            rs = plugin.mysql!!.query("SELECT * FROM amanzonkindle_booktable WHERE book_base64='$base64';")
+            rs = mysql.query("SELECT * FROM amanzonkindle_booktable WHERE book_base64='$base64';")
         } catch (e: InterruptedException) {
             e.printStackTrace()
         } catch (e: ExecutionException) {
@@ -431,10 +469,23 @@ class GetBookPrice(private val p: Player, private val book: ItemStack, private v
 
         plugin.price = price
 
+        val guiProcess = GuiProcess(plugin)
+        val inv = guiProcess.buyBookGuiCreate(book, plugin.price)
+
+        plugin.buyBookMap[p] = inv
+
+        p.closeInventory()
+
+        p.chat("/amk buybook")
+
+        mysql.close()
+
     }
 }
 
 class BuyBook(private val book: ItemStack, private val p: Player, private val plugin: AmanzonKindle): Thread(){
+
+    val mysql = MySQLManager(plugin, "amanzon")
 
     var host: String = ""
     var user: String = ""
@@ -455,6 +506,7 @@ class BuyBook(private val book: ItemStack, private val p: Player, private val pl
 
     }
 
+    @Synchronized
     override fun run() {
 
         if (plugin.config!!.getConfig()!!.getString("mysql") == null) {
@@ -463,7 +515,7 @@ class BuyBook(private val book: ItemStack, private val p: Player, private val pl
             return
         }
 
-        if (plugin.mysql!!.Connect(host, db, user, pass, port) === false) {
+        if (mysql.Connect(host, db, user, pass, port) === false) {
             Bukkit.getLogger().info("Failed Conected MySQL")
             p.sendMessage("${plugin.prefix}§cMysqlデータベースに接続できないため失敗しました")
             return
@@ -483,7 +535,7 @@ class BuyBook(private val book: ItemStack, private val p: Player, private val pl
         var rs: ResultSet? = null
 
         try {
-            rs = plugin.mysql!!.query("SELECT * FROM amanzonkindle_booktable WHERE book_base64='$base64';")
+            rs = mysql.query("SELECT * FROM amanzonkindle_booktable WHERE book_base64='$base64';")
         } catch (e: InterruptedException) {
             e.printStackTrace()
         } catch (e: ExecutionException) {
@@ -497,12 +549,14 @@ class BuyBook(private val book: ItemStack, private val p: Player, private val pl
         var price = 0.0
         var id = 0
 
+        var uuid = ""
+
         while (rs!!.next()){
 
             var count: ResultSet? = null
 
             try {
-                count = plugin.mysql!!.query("SELECT count(1) FROM amanzonkindle_bookshelf WHERE buy_bookid=${rs.getInt("id")} AND owner_uuid='${p.uniqueId}';")
+                count = mysql.query("SELECT count(1) FROM amanzonkindle_bookshelf WHERE buy_bookid=${rs.getInt("id")} AND owner_uuid='${p.uniqueId}';")
             } catch (e: InterruptedException) {
                 e.printStackTrace()
             } catch (e: ExecutionException) {
@@ -516,6 +570,8 @@ class BuyBook(private val book: ItemStack, private val p: Player, private val pl
             price = rs.getDouble("book_price")
 
             id = rs.getInt("id")
+
+            uuid = rs.getString("book_author_uuid")
 
 
         }
@@ -535,9 +591,9 @@ class BuyBook(private val book: ItemStack, private val p: Player, private val pl
         Bukkit.getLogger().info(price.toString())
         Bukkit.getLogger().info(plugin.config!!.getConfig()!!.getDouble("authorbalance").toString())
 
-        plugin.mysql!!.execute("INSERT INTO amanzonkindle_bookshelf (owner_name,owner_uuid,buy_bookid,fav) VALUES('${p.name}','${p.uniqueId}','$id',false);")
-        plugin.mysql!!.execute("UPDATE amanzonkindle_publicatertable SET publicater_balance=publicater_balance+${price*plugin.config!!.getConfig()!!.getDouble("authorbalance")} WHERE publicater_uuid='${author_uuid}';")
-        plugin.mysql!!.execute("UPDATE amanzonkindle_booktable SET book_sold_amount=book_sold_amount+1 WHERE book_base64='$base64';")
+        mysql.execute("INSERT INTO amanzonkindle_bookshelf (owner_name,owner_uuid,buy_bookid,fav) VALUES('${p.name}','${p.uniqueId}','$id',false);")
+        mysql.execute("UPDATE amanzonkindle_publicatertable SET publicater_balance=publicater_balance+${price*plugin.config!!.getConfig()!!.getDouble("authorbalance")} WHERE publicater_uuid='${uuid}';")
+        mysql.execute("UPDATE amanzonkindle_booktable SET book_sold_amount=book_sold_amount+1 WHERE book_base64='$base64';")
 
         p.sendMessage("${plugin.prefix}§a本を購入しました")
 
@@ -545,13 +601,18 @@ class BuyBook(private val book: ItemStack, private val p: Player, private val pl
 
         p.closeInventory()
 
-        p.chat("/amk bookshelf")
+        val gob = GetOwnBook(p, plugin)
+        gob.start()
+
+        mysql.close()
 
     }
 
 }
 
 class SearchBook(private val kind: String, private val keyword: String, private val p: Player, private val plugin: AmanzonKindle): Thread(){
+
+    val mysql = MySQLManager(plugin, "amanzon")
 
     var host: String = ""
     var user: String = ""
@@ -572,6 +633,7 @@ class SearchBook(private val kind: String, private val keyword: String, private 
 
     }
 
+    @Synchronized
     override fun run() {
 
         if (plugin.config!!.getConfig()!!.getString("mysql") == null) {
@@ -580,7 +642,7 @@ class SearchBook(private val kind: String, private val keyword: String, private 
             return
         }
 
-        if (plugin.mysql!!.Connect(host, db, user, pass, port) === false) {
+        if (mysql.Connect(host, db, user, pass, port) === false) {
             Bukkit.getLogger().info("Failed Conected MySQL")
             p.sendMessage("${plugin.prefix}§cMysqlデータベースに接続できないため失敗しました")
             return
@@ -590,9 +652,9 @@ class SearchBook(private val kind: String, private val keyword: String, private 
 
         try {
             rs = if (kind == "author_name"){
-                plugin.mysql!!.query("SELECT * FROM amanzonkindle_booktable WHERE book_$kind='$keyword' AND enable=true;")
+                mysql.query("SELECT * FROM amanzonkindle_booktable WHERE book_$kind='$keyword' AND enable=true;")
             }else {
-                plugin.mysql!!.query("SELECT * FROM amanzonkindle_booktable WHERE book_$kind LIKE '%$keyword%'AND enable=true;")
+                mysql.query("SELECT * FROM amanzonkindle_booktable WHERE book_$kind LIKE '%$keyword%'AND enable=true;")
             }
         } catch (e: InterruptedException) {
             e.printStackTrace()
@@ -612,7 +674,7 @@ class SearchBook(private val kind: String, private val keyword: String, private 
             val book: ItemStack = plugin.itemFromBase64(rs.getString("book_base64"))!!
 
             val bookm = book.itemMeta
-            val booklore = bookm.lore
+            val booklore = mutableListOf<String>()
 
             val book_price = rs.getDouble("book_price")
 
@@ -646,11 +708,19 @@ class SearchBook(private val kind: String, private val keyword: String, private 
 
         plugin.searchinvmap[p] = itemList
 
+        mysql.close()
+
+        p.closeInventory()
+
+        p.chat("/amk getsearch")
+
     }
 
 }
 
 class PublicateBook(private val cate: String, private val book: ItemStack, private val price: Double, private val p: Player, private val plugin: AmanzonKindle) : Thread() {
+
+    val mysql = MySQLManager(plugin, "amanzon")
 
     var host: String = ""
     var user: String = ""
@@ -671,6 +741,7 @@ class PublicateBook(private val cate: String, private val book: ItemStack, priva
 
     }
 
+    @Synchronized
     override fun run() {
 
         if (plugin.config!!.getConfig()!!.getString("mysql") == null) {
@@ -680,7 +751,7 @@ class PublicateBook(private val cate: String, private val book: ItemStack, priva
             return
         }
 
-        if (plugin.mysql!!.Connect(host, db, user, pass, port) === false) {
+        if (mysql.Connect(host, db, user, pass, port) === false) {
             Bukkit.getLogger().info("Failed Conected MySQL")
             p.sendMessage("${plugin.prefix}§cMysqlデータベースに接続できないため失敗しました")
             p.closeInventory()
@@ -708,7 +779,7 @@ class PublicateBook(private val cate: String, private val book: ItemStack, priva
         var resultSet: ResultSet? = null
 
         try {
-            resultSet = plugin.mysql!!.query("SELECT count(1) FROM amanzonkindle_publicatertable WHERE publicater_uuid='$author_uuid';")!!
+            resultSet = mysql.query("SELECT count(1) FROM amanzonkindle_publicatertable WHERE publicater_uuid='$author_uuid';")!!
         } catch (e: InterruptedException) {
             e.printStackTrace()
         } catch (e: ExecutionException) {
@@ -725,7 +796,7 @@ class PublicateBook(private val cate: String, private val book: ItemStack, priva
             var count: ResultSet? = null
 
             try {
-                count = plugin.mysql!!.query("SELECT count(1) FROM amanzonkindle_booktable WHERE book_base64='$book_base64';")!!
+                count = mysql.query("SELECT count(1) FROM amanzonkindle_booktable WHERE book_base64='$book_base64';")!!
             } catch (e: InterruptedException) {
                 e.printStackTrace()
             } catch (e: ExecutionException) {
@@ -735,7 +806,7 @@ class PublicateBook(private val cate: String, private val book: ItemStack, priva
             count!!.first()
             if (count!!.getInt("count(1)") == 0) {
 
-                plugin.mysql!!.execute("INSERT INTO amanzonkindle_booktable (book_name,book_author_name,book_author_uuid,book_base64,book_contents,book_category,book_price) " +
+                mysql.execute("INSERT INTO amanzonkindle_booktable (book_name,book_author_name,book_author_uuid,book_base64,book_contents,book_category,book_price) " +
                         "VALUES('$book_name','$book_author_name','$author_uuid','$book_base64','$bookcontent','$cate',$price);")
 
                 Bukkit.getLogger().info("insert complite")
@@ -751,11 +822,15 @@ class PublicateBook(private val cate: String, private val book: ItemStack, priva
 
             p.closeInventory()
 
+            mysql.close()
+
         }
     }
 }
 
 class GetBalance(private val p: Player, private val plugin: AmanzonKindle) : Thread() {
+
+    val mysql = MySQLManager(plugin, "amanzon")
 
     var host: String = ""
     var user: String = ""
@@ -776,6 +851,7 @@ class GetBalance(private val p: Player, private val plugin: AmanzonKindle) : Thr
 
     }
 
+    @Synchronized
     override fun run() {
 
         if (plugin.config!!.getConfig()!!.getString("mysql") == null) {
@@ -784,7 +860,7 @@ class GetBalance(private val p: Player, private val plugin: AmanzonKindle) : Thr
             return
         }
 
-        if (plugin.mysql!!.Connect(host, db, user, pass, port) === false) {
+        if (mysql.Connect(host, db, user, pass, port) === false) {
             Bukkit.getLogger().info("Failed Conected MySQL")
             p.sendMessage("${plugin.prefix}§cMysqlデータベースに接続できないため失敗しました")
             return
@@ -795,7 +871,7 @@ class GetBalance(private val p: Player, private val plugin: AmanzonKindle) : Thr
         var resultSet: ResultSet? = null
 
         try {
-            resultSet = plugin.mysql!!.query("SELECT count(1) FROM amanzonkindle_publicatertable WHERE publicater_uuid='$uuid';")!!
+            resultSet = mysql.query("SELECT count(1) FROM amanzonkindle_publicatertable WHERE publicater_uuid='$uuid';")!!
         } catch (e: InterruptedException) {
             e.printStackTrace()
         } catch (e: ExecutionException) {
@@ -811,7 +887,7 @@ class GetBalance(private val p: Player, private val plugin: AmanzonKindle) : Thr
         var rs: ResultSet? = null
 
         try {
-            rs = plugin.mysql!!.query("SELECT * FROM amanzonkindle_publicatertable WHERE publicater_uuid='$uuid';")!!
+            rs = mysql.query("SELECT * FROM amanzonkindle_publicatertable WHERE publicater_uuid='$uuid';")!!
         } catch (e: InterruptedException) {
             e.printStackTrace()
         } catch (e: ExecutionException) {
@@ -829,15 +905,19 @@ class GetBalance(private val p: Player, private val plugin: AmanzonKindle) : Thr
             return
         }
 
-        plugin.mysql!!.execute("UPDATE amanzonkindle_publicatertable SET publicater_balance=0 WHERE publicater_uuid='$uuid';")
+        mysql.execute("UPDATE amanzonkindle_publicatertable SET publicater_balance=0 WHERE publicater_uuid='$uuid';")
 
         p.sendMessage("${plugin.prefix}§a印税として§6${balance}円§a振り込まれました")
         plugin.vm!!.deposit(uuid, balance)
+
+        mysql.close()
 
     }
 }
 
 class GetFavBook(private val p: Player, private val plugin: AmanzonKindle): Thread(){
+
+    val mysql = MySQLManager(plugin, "amanzon")
 
     var host: String = ""
     var user: String = ""
@@ -858,6 +938,7 @@ class GetFavBook(private val p: Player, private val plugin: AmanzonKindle): Thre
 
     }
 
+    @Synchronized
     override fun run() {
 
         if (plugin.config!!.getConfig()!!.getString("mysql") == null) {
@@ -866,7 +947,7 @@ class GetFavBook(private val p: Player, private val plugin: AmanzonKindle): Thre
             return
         }
 
-        if (plugin.mysql!!.Connect(host, db, user, pass, port) === false) {
+        if (mysql.Connect(host, db, user, pass, port) === false) {
             Bukkit.getLogger().info("Failed Conected MySQL")
             p.sendMessage("${plugin.prefix}§cMysqlデータベースに接続できないため失敗しました")
             return
@@ -875,7 +956,7 @@ class GetFavBook(private val p: Player, private val plugin: AmanzonKindle): Thre
         var rs: ResultSet? = null
 
         try {
-            rs = plugin.mysql!!.query("SELECT * FROM amanzonkindle_booktable WHERE enable=true ORDER BY book_fav DESC;")
+            rs = mysql.query("SELECT * FROM amanzonkindle_booktable WHERE enable=true ORDER BY book_fav DESC;")
         } catch (e: InterruptedException) {
             e.printStackTrace()
         } catch (e: ExecutionException) {
@@ -925,11 +1006,17 @@ class GetFavBook(private val p: Player, private val plugin: AmanzonKindle): Thre
 
         plugin.searchinvmap[p] = itemList
 
+        p.chat("/amk getsearch")
+
+        mysql.close()
+
     }
 
 }
 
 class ShowPlayerSale(private val p: Player, private val plugin: AmanzonKindle): Thread() {
+
+    val mysql = MySQLManager(plugin, "amanzon")
 
     var host: String = ""
     var user: String = ""
@@ -950,6 +1037,7 @@ class ShowPlayerSale(private val p: Player, private val plugin: AmanzonKindle): 
 
     }
 
+    @Synchronized
     override fun run() {
 
         if (plugin.config!!.getConfig()!!.getString("mysql") == null) {
@@ -958,7 +1046,7 @@ class ShowPlayerSale(private val p: Player, private val plugin: AmanzonKindle): 
             return
         }
 
-        if (plugin.mysql!!.Connect(host, db, user, pass, port) === false) {
+        if (mysql.Connect(host, db, user, pass, port) === false) {
             Bukkit.getLogger().info("Failed Conected MySQL")
             p.sendMessage("${plugin.prefix}§cMysqlデータベースに接続できないため失敗しました")
             return
@@ -969,7 +1057,7 @@ class ShowPlayerSale(private val p: Player, private val plugin: AmanzonKindle): 
         var count: ResultSet? = null
 
         try {
-            count = plugin.mysql!!.query("SELECT count(1) FROM amanzonkindle_publicatertable WHERE publicater_uuid='$uuid';")!!
+            count = mysql.query("SELECT count(1) FROM amanzonkindle_publicatertable WHERE publicater_uuid='$uuid';")!!
         } catch (e: InterruptedException) {
             e.printStackTrace()
         } catch (e: ExecutionException) {
@@ -985,7 +1073,7 @@ class ShowPlayerSale(private val p: Player, private val plugin: AmanzonKindle): 
         var rs: ResultSet? = null
 
         try {
-            rs = plugin.mysql!!.query("SELECT * FROM amanzonkindle_booktable WHERE book_author_uuid='$uuid';")!!
+            rs = mysql.query("SELECT * FROM amanzonkindle_booktable WHERE book_author_uuid='$uuid';")!!
         } catch (e: InterruptedException) {
             e.printStackTrace()
         } catch (e: ExecutionException) {
@@ -1002,14 +1090,14 @@ class ShowPlayerSale(private val p: Player, private val plugin: AmanzonKindle): 
         while (rs!!.next()){
 
             p.sendMessage("§6§l${rs.getString("book_name")}§f: " + "${rs.getInt("book_sold_amount")}DL/" +
-                    "${rs.getInt("book_sold_amount")*rs.getDouble("book_price")*plugin.config!!.getConfig()!!.getDouble("authorbalance")}円/${rs.getInt("book_fav")}いいね")
+                    "${rs.getInt("book_sold_amount")*rs.getDouble("book_price")}円/${rs.getInt("book_fav")}いいね")
 
         }
 
         var resultSet: ResultSet? = null
 
         try {
-            resultSet = plugin.mysql!!.query("SELECT * FROM amanzonkindle_publicatertable WHERE publicater_uuid='$uuid';")!!
+            resultSet = mysql.query("SELECT * FROM amanzonkindle_publicatertable WHERE publicater_uuid='$uuid';")!!
         } catch (e: InterruptedException) {
             e.printStackTrace()
         } catch (e: ExecutionException) {
@@ -1017,12 +1105,17 @@ class ShowPlayerSale(private val p: Player, private val plugin: AmanzonKindle): 
         }
 
         resultSet!!.first()
-        plugin.event!!.sendHoverText(p, "§f§l印税合計:${resultSet.getDouble("publicater_balance")}", "印税を受け取る", "/amk getbalance")
+        p.sendMessage("§f§l貯まっている印税合計:${resultSet.getDouble("publicater_balance")}")
+        plugin.event!!.sendHoverText(p, "§f§l§n印税を受け取るにはここをクリック！！！", "印税を受け取る", "/amk getbalance")
+
+        mysql.close()
 
     }
 }
 
 class FavProcess(private val book: ItemStack, private val boolean: Boolean, private val p: Player, private val plugin: AmanzonKindle): Thread() {
+
+    val mysql = MySQLManager(plugin, "amanzon")
 
     var host: String = ""
     var user: String = ""
@@ -1043,6 +1136,7 @@ class FavProcess(private val book: ItemStack, private val boolean: Boolean, priv
 
     }
 
+    @Synchronized
     override fun run() {
 
         if (plugin.config!!.getConfig()!!.getString("mysql") == null) {
@@ -1051,7 +1145,7 @@ class FavProcess(private val book: ItemStack, private val boolean: Boolean, priv
             return
         }
 
-        if (plugin.mysql!!.Connect(host, db, user, pass, port) === false) {
+        if (mysql.Connect(host, db, user, pass, port) === false) {
             Bukkit.getLogger().info("Failed Conected MySQL")
             p.sendMessage("${plugin.prefix}§cMysqlデータベースに接続できないため失敗しました")
             return
@@ -1062,7 +1156,7 @@ class FavProcess(private val book: ItemStack, private val boolean: Boolean, priv
         var resultSet: ResultSet? = null
 
         try {
-            resultSet = plugin.mysql!!.query("SELECT * FROM amanzonkindle_booktable WHERE book_base64='$base64';")!!
+            resultSet = mysql.query("SELECT * FROM amanzonkindle_booktable WHERE book_base64='$base64';")!!
         } catch (e: InterruptedException) {
             e.printStackTrace()
         } catch (e: ExecutionException) {
@@ -1077,24 +1171,31 @@ class FavProcess(private val book: ItemStack, private val boolean: Boolean, priv
 
         if (boolean){
 
-            plugin.mysql!!.execute("UPDATE amanzonkindle_bookshelf SET fav=false WHERE buy_bookid=$book_id;")
-            plugin.mysql!!.execute("UPDATE amanzonkindle_booktable SET book_fav=book_fav-1 WHERE id=$book_id;")
+            mysql.execute("UPDATE amanzonkindle_bookshelf SET fav=false WHERE buy_bookid=$book_id;")
+            mysql.execute("UPDATE amanzonkindle_booktable SET book_fav=book_fav-1 WHERE id=$book_id;")
 
             p.sendMessage("${plugin.prefix}§aいいね！を解除しました")
 
         }else{
 
-            plugin.mysql!!.execute("UPDATE amanzonkindle_bookshelf SET fav=true WHERE buy_bookid=${book_id};")
-            plugin.mysql!!.execute("UPDATE amanzonkindle_booktable SET book_fav=book_fav+1 WHERE id=$book_id;")
+            mysql.execute("UPDATE amanzonkindle_bookshelf SET fav=true WHERE buy_bookid=${book_id};")
+            mysql.execute("UPDATE amanzonkindle_booktable SET book_fav=book_fav+1 WHERE id=$book_id;")
 
             p.sendMessage("${plugin.prefix}§aいいね！しました")
 
         }
 
+        mysql.close()
+
+        val getFav = GetFav(book, p, plugin)
+        getFav.start()
+
     }
 }
 
 class GetFav(private val book: ItemStack, private val p: Player, private val plugin: AmanzonKindle): Thread() {
+
+    val mysql = MySQLManager(plugin, "amanzon")
 
     var host: String = ""
     var user: String = ""
@@ -1115,6 +1216,7 @@ class GetFav(private val book: ItemStack, private val p: Player, private val plu
 
     }
 
+    @Synchronized
     override fun run() {
 
         if (plugin.config!!.getConfig()!!.getString("mysql") == null) {
@@ -1123,7 +1225,7 @@ class GetFav(private val book: ItemStack, private val p: Player, private val plu
             return
         }
 
-        if (plugin.mysql!!.Connect(host, db, user, pass, port) === false) {
+        if (mysql.Connect(host, db, user, pass, port) === false) {
             Bukkit.getLogger().info("Failed Conected MySQL")
             p.sendMessage("${plugin.prefix}§cMysqlデータベースに接続できないため失敗しました")
             return
@@ -1134,7 +1236,7 @@ class GetFav(private val book: ItemStack, private val p: Player, private val plu
         var resultSet: ResultSet? = null
 
         try {
-            resultSet = plugin.mysql!!.query("SELECT * FROM amanzonkindle_booktable WHERE book_base64='$base64';")!!
+            resultSet = mysql.query("SELECT * FROM amanzonkindle_booktable WHERE book_base64='$base64';")!!
         } catch (e: InterruptedException) {
             e.printStackTrace()
         } catch (e: ExecutionException) {
@@ -1150,7 +1252,7 @@ class GetFav(private val book: ItemStack, private val p: Player, private val plu
         var rs: ResultSet? = null
 
         try {
-            rs = plugin.mysql!!.query("SELECT * FROM amanzonkindle_bookshelf WHERE buy_bookid='$book_id';")!!
+            rs = mysql.query("SELECT * FROM amanzonkindle_bookshelf WHERE buy_bookid='$book_id' AND owner_uuid='${p.uniqueId}';")!!
         } catch (e: InterruptedException) {
             e.printStackTrace()
         } catch (e: ExecutionException) {
@@ -1159,12 +1261,23 @@ class GetFav(private val book: ItemStack, private val p: Player, private val plu
 
         rs!!.first()
 
-        plugin.favmap[p] = rs.getBoolean("fav")
+        val gp = GuiProcess(plugin)
+        val inv = gp.bookGui(rs.getBoolean("fav"), book)
+
+        plugin.getFavMap[p] = inv
+
+        p.closeInventory()
+
+        p.chat("/amk getfav")
+
+        mysql.close()
 
     }
 }
 
 class GetDLBook(private val p: Player, private val plugin: AmanzonKindle): Thread(){
+
+    val mysql = MySQLManager(plugin, "amanzon")
 
     var host: String = ""
     var user: String = ""
@@ -1185,6 +1298,7 @@ class GetDLBook(private val p: Player, private val plugin: AmanzonKindle): Threa
 
     }
 
+    @Synchronized
     override fun run() {
 
         if (plugin.config!!.getConfig()!!.getString("mysql") == null) {
@@ -1193,7 +1307,7 @@ class GetDLBook(private val p: Player, private val plugin: AmanzonKindle): Threa
             return
         }
 
-        if (plugin.mysql!!.Connect(host, db, user, pass, port) === false) {
+        if (mysql.Connect(host, db, user, pass, port) === false) {
             Bukkit.getLogger().info("Failed Conected MySQL")
             p.sendMessage("${plugin.prefix}§cMysqlデータベースに接続できないため失敗しました")
             return
@@ -1202,7 +1316,7 @@ class GetDLBook(private val p: Player, private val plugin: AmanzonKindle): Threa
         var rs: ResultSet? = null
 
         try {
-            rs = plugin.mysql!!.query("SELECT * FROM amanzonkindle_booktable WHERE enable=true ORDER BY book_sold_amount DESC;")
+            rs = mysql.query("SELECT * FROM amanzonkindle_booktable WHERE enable=true ORDER BY book_sold_amount DESC;")
         } catch (e: InterruptedException) {
             e.printStackTrace()
         } catch (e: ExecutionException) {
@@ -1252,11 +1366,17 @@ class GetDLBook(private val p: Player, private val plugin: AmanzonKindle): Threa
 
         plugin.searchinvmap[p] = itemList
 
+        p.chat("/amk getsearch")
+
+        mysql.close()
+
     }
 
 }
 
 class GetOPBook(private val p: Player, private val plugin: AmanzonKindle): Thread(){
+
+    val mysql = MySQLManager(plugin, "amanzon")
 
     var host: String = ""
     var user: String = ""
@@ -1277,6 +1397,7 @@ class GetOPBook(private val p: Player, private val plugin: AmanzonKindle): Threa
 
     }
 
+    @Synchronized
     override fun run() {
 
         if (plugin.config!!.getConfig()!!.getString("mysql") == null) {
@@ -1285,7 +1406,7 @@ class GetOPBook(private val p: Player, private val plugin: AmanzonKindle): Threa
             return
         }
 
-        if (plugin.mysql!!.Connect(host, db, user, pass, port) === false) {
+        if (mysql.Connect(host, db, user, pass, port) === false) {
             Bukkit.getLogger().info("Failed Conected MySQL")
             p.sendMessage("${plugin.prefix}§cMysqlデータベースに接続できないため失敗しました")
             return
@@ -1294,7 +1415,7 @@ class GetOPBook(private val p: Player, private val plugin: AmanzonKindle): Threa
         var rs: ResultSet? = null
 
         try {
-            rs = plugin.mysql!!.query("SELECT * FROM amanzonkindle_booktable ORDER BY id DESC;")
+            rs = mysql.query("SELECT * FROM amanzonkindle_booktable ORDER BY id DESC;")
         } catch (e: InterruptedException) {
             e.printStackTrace()
         } catch (e: ExecutionException) {
@@ -1313,13 +1434,25 @@ class GetOPBook(private val p: Player, private val plugin: AmanzonKindle): Threa
 
         }
 
-        plugin.openinvmap[p] = itemList
+        mysql.close()
+
+        val itemhash: HashMap<Player, MutableList<ItemStack>> = HashMap()
+        itemhash[p] = itemList
+
+        val gp = GuiProcess(plugin)
+        val inv = gp.allBookGuiCreate(p,1, "§6§lOP用本一覧", itemhash)
+
+        plugin.getOPMap[p] = inv
+
+        p.chat("/amk openbookop")
 
     }
 
 }
 
 class RemoveBook(private val book: ItemStack, private val p: Player, private val plugin: AmanzonKindle): Thread() {
+
+    val mysql = MySQLManager(plugin, "amanzon")
 
     var host: String = ""
     var user: String = ""
@@ -1340,6 +1473,7 @@ class RemoveBook(private val book: ItemStack, private val p: Player, private val
 
     }
 
+    @Synchronized
     override fun run() {
 
         if (plugin.config!!.getConfig()!!.getString("mysql") == null) {
@@ -1348,7 +1482,7 @@ class RemoveBook(private val book: ItemStack, private val p: Player, private val
             return
         }
 
-        if (plugin.mysql!!.Connect(host, db, user, pass, port) === false) {
+        if (mysql.Connect(host, db, user, pass, port) === false) {
             Bukkit.getLogger().info("Failed Conected MySQL")
             p.sendMessage("${plugin.prefix}§cMysqlデータベースに接続できないため失敗しました")
             return
@@ -1356,9 +1490,86 @@ class RemoveBook(private val book: ItemStack, private val p: Player, private val
 
         val base64 = plugin.itemToBase64(book)
 
-        plugin.mysql!!.execute("UPDATE amanzonkindle_booktable SET enable=false WHERE book_base64='$base64';")
+        mysql.execute("UPDATE amanzonkindle_booktable SET enable=false WHERE book_base64='$base64';")
 
         p.sendMessage("${plugin.prefix}§a削除しました")
+
+        mysql.close()
+
+        val gb = GetBook(p, plugin)
+        gb.start()
+
+    }
+}
+
+class DeleteBook(private val book: ItemStack, private val p: Player, private val plugin: AmanzonKindle): Thread() {
+
+    val mysql = MySQLManager(plugin, "amanzon")
+
+    var host: String = ""
+    var user: String = ""
+    var pass: String = ""
+    var port: String = ""
+    var db: String = ""
+
+    init {
+
+        if (plugin.config!!.getConfig()!!.getString("mysql") != null) {
+
+            host = plugin.config!!.getConfig()!!.getString("mysql.host")
+            user = plugin.config!!.getConfig()!!.getString("mysql.user")
+            pass = plugin.config!!.getConfig()!!.getString("mysql.pass")
+            port = plugin.config!!.getConfig()!!.getString("mysql.port")
+            db = plugin.config!!.getConfig()!!.getString("mysql.db")
+        }
+
+    }
+
+    @Synchronized
+    override fun run() {
+
+        if (plugin.config!!.getConfig()!!.getString("mysql") == null) {
+            Bukkit.getLogger().info("mysql is null")
+            p.sendMessage("${plugin.prefix}§cMysqlデータベースに接続できないため失敗しました")
+            return
+        }
+
+        if (mysql.Connect(host, db, user, pass, port) === false) {
+            Bukkit.getLogger().info("Failed Conected MySQL")
+            p.sendMessage("${plugin.prefix}§cMysqlデータベースに接続できないため失敗しました")
+            return
+        }
+
+        val base64 = plugin.itemToBase64(book)
+
+        var rs: ResultSet? = null
+
+        try {
+            rs = mysql.query("SELECT * FROM amanzonkindle_booktable WHERE book_base64='$base64';")
+        } catch (e: InterruptedException) {
+            e.printStackTrace()
+        } catch (e: ExecutionException) {
+            e.printStackTrace()
+        }
+
+        if (rs == null){
+
+            p.sendMessage("${plugin.prefix}§cこの本は出版されてません")
+            return
+
+        }
+
+        mysql.execute("DELETE FROM `amanzonkindle_booktable` WHERE `book_base64`='$base64';")
+
+        while (rs!!.next()) {
+            mysql.execute("DELETE FROM `amanzonkindle_bookshelf` WHERE buy_bookid=${rs.getInt("id")};")
+        }
+
+        mysql.close()
+
+        val bookm = book.itemMeta as BookMeta
+
+        p.sendMessage("${plugin.prefix}§e${bookm.title}§aを削除しました")
 
     }
 }
